@@ -57,10 +57,14 @@ function get_task_logs
     local task_log_dir="${run_id}/task_logs/${task_id}"
     mkdir -p "$task_log_dir"
     echo "Getting task logs for $task_id"
-    local executor_log_files=( $(dcos task --all ls --long $task_id | awk '{print $NF}' | grep 'stderr\|stdout' | grep -v logrotate) )
-    for log_file in "${executor_log_files[@]}"
+    #local executor_log_files=( $(dcos task ls --all --long $task_id | awk '{print $NF}' | grep 'stderr\|stdout' | grep -v logrotate) )
+    # Cannot use task ls as it would list executor sandbox files instead of nested container files
+    # Using static list for now
+    for log_file in {stdout,stderr}{,.1,.2,.3,.4,.5,.6,.7,.8,.9}
     do
-        dcos task log --all --lines 10000 "$task_id" "$log_file" > "${task_log_dir}/${log_file}"
+        set +e
+        dcos task log --all --lines 10000 "$task_id" "$log_file" > "${task_log_dir}/${log_file}" 2 > /dev/null
+        set -e
     done
 }
 
