@@ -109,24 +109,10 @@ function get_pod_logs
     # If the scheduler is running get pod list from API, else just get running tasks for the framework
     if [ "$scheduler_running" == "true" ]
     then
-        # Get pod list from scheduler using API
-        pods=( $(curl -k -s -f -m 30 -H "Authorization: token=$auth_token" ${dcos_url}/service/${service_name}/v1/pod | jq -r .[]) )
-
-	# Get task_ids for the pod list
-        for pod_name in "${pods[@]}"
-        do
-            task_id=$(dcos service --json | jq -r --arg SERVICE_NAME "$service_name" --arg POD_NAME "$pod_name" '.[] | select(.name == $SERVICE_NAME) | .tasks[] | select(.id | contains($POD_NAME)) | .id')
-	    # If task_id is empty possibly the pod is not running, look in completed tasks as well
-            if [ -z "$task_id" ]
-            then
-                task_id=$(dcos service --json | jq -r --arg SERVICE_NAME "$service_name" --arg POD_NAME "$pod_name" '.[] | select(.name == $SERVICE_NAME) | .completed_tasks[] | select(.id | contains($POD_NAME)) | .id')
-	    fi
-	    # Store task_ids in an array 
-	    pod_task_ids+=("$task_id")
-        done
+        pod_task_ids=( $(curl -k -s -f -m 30 -H "Authorization: token=$auth_token" ${dcos_url}/service/${service_name}/v1/pod/status  | jq -r '.pods[].instances[].tasks[] | select(.status != "FINISHED" and .id != "" )| .id ') )
     else
-	# Scheduler is not running, so lets just get running tasks for the framework by framework name
-	pod_task_ids=( $(dcos service --json --inactive | jq -r --arg SERVICE_NAME "$service_name" '.[] | select(.name == $SERVICE_NAME)| .tasks[].id') ) 
+	    # Scheduler is not running, so lets just get running tasks for the framework by framework name
+	    pod_task_ids=( $(dcos service --json --inactive | jq -r --arg SERVICE_NAME "$service_name" '.[] | select(.name == $SERVICE_NAME)| .tasks[].id') ) 
     fi
     for task_id in "${pod_task_ids[@]}"
     do
