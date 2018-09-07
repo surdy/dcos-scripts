@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+bundle_file=$1
+bundle_dir=${bundle_file%%.zip}
+unzip -d "$bundle_dir" "$bundle_file"
+cd "$bundle_dir"
+for d in */ ; do
+
+    echo "$d"
+    cd "$d"
+    find . -name '*.gz' -exec gunzip {} \;
+    cd ..
+done
